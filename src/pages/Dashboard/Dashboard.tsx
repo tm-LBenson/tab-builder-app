@@ -1,23 +1,9 @@
 import { useEffect, useState } from "react";
-import { db } from "../../firebase";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  limit,
-  orderBy,
-} from "firebase/firestore";
-import HorizontalScroller from "./components/HorizontalScroller";
-import NewsSection from "./components/NewsSection";
 import { useAuth } from "../../context/useAuth";
 
-interface Song {
-  id: string;
-  title: string;
-  ownerId: string;
-  public: boolean;
-}
+import SongList from "./components/SongList";
+import NewSongForm from "./components/NewSongForm";
+import NewsSection from "./components/NewsSection";
 
 interface NewsItem {
   id: string;
@@ -25,25 +11,8 @@ interface NewsItem {
   url: string;
 }
 
-async function fetchLibrary(uid: string): Promise<Song[]> {
-  const q = query(collection(db, "songs"), where("ownerId", "==", uid));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ ...(d.data() as Song), id: d.id }));
-}
-
-async function fetchPublic(): Promise<Song[]> {
-  const q = query(
-    collection(db, "songs"),
-    where("public", "==", true),
-    orderBy("createdAt", "desc"),
-    limit(20),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ ...(d.data() as Song), id: d.id }));
-}
-
 async function fetchNews(): Promise<NewsItem[]> {
-  // TODO: replace with real endpoint / RSS feed
+  // TODO: swap this for a real endpoint / RSS feed
   return [
     { id: "1", title: "Welcome to TabVault!", url: "#" },
     { id: "2", title: "New sharing features released", url: "#" },
@@ -52,36 +21,19 @@ async function fetchNews(): Promise<NewsItem[]> {
 
 export default function Dashboard() {
   const { isAuthenticated } = useAuth();
-  const [library, setLibrary] = useState<Song[]>([]);
-  const [publicSongs, setPublicSongs] = useState<Song[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [view, setView] = useState<"full" | "libraryOnly">("full");
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    interface FirebaseWindow extends Window {
-      firebase?: {
-        auth?: {
-          currentUser?: {
-            uid?: string;
-          };
-        };
-      };
-    }
-    const uid =
-      (window as FirebaseWindow).firebase?.auth?.currentUser?.uid ?? null;
-    if (!uid) return;
-
-    fetchLibrary(uid).then(setLibrary);
-    fetchPublic().then(setPublicSongs);
-    fetchNews().then(setNews);
+    if (isAuthenticated) fetchNews().then(setNews);
   }, [isAuthenticated]);
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-6 md:p-10">
-      <header className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-gray-900 text-gray-100 p-6 md:p-10 space-y-10">
+      <header className="flex justify-between items-center">
         <h1 className="text-3xl font-extrabold text-red-500">Dashboard</h1>
         <button
           onClick={() =>
@@ -93,19 +45,11 @@ export default function Dashboard() {
         </button>
       </header>
 
+      <NewSongForm onCreated={() => setRefreshKey((k) => k + 1)} />
+
+      <SongList key={refreshKey} />
+
       {view === "full" && <NewsSection items={news} />}
-
-      <HorizontalScroller
-        title={view === "libraryOnly" ? "My Songs" : "My Library"}
-        songs={library}
-      />
-
-      {view === "full" && (
-        <HorizontalScroller
-          title="New Public Songs"
-          songs={publicSongs}
-        />
-      )}
     </div>
   );
 }
