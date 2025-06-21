@@ -1,10 +1,10 @@
-// example usage in App.tsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Splash from "./pages/Splash/Splash";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import { AuthProvider, PrivateRoute } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import SongBuilder from './pages/SongBuilder/SongBuilder';
 
 export default function App() {
   return (
@@ -17,11 +17,21 @@ export default function App() {
               path="/"
               element={<Splash />}
             />
+
             <Route
               path="/dashboard"
               element={
                 <PrivateRoute>
                   <Dashboard />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/songs/new"
+              element={
+                <PrivateRoute>
+                  <SongBuilder />
                 </PrivateRoute>
               }
             />

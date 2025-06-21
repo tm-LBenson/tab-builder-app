@@ -24,6 +24,14 @@ export default function Navbar() {
           >
             {isAuthenticated ? "Dashboard" : "Get started"}
           </Link>
+          {isAuthenticated && (
+            <Link
+              to="/songs/new"
+              className="px-4 py-2 bg-red-600 rounded hover:bg-red-500 text-white"
+            >
+              + New song
+            </Link>
+          )}
           {isAuthenticated ? (
             <button
               onClick={logout}

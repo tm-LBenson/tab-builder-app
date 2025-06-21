@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/useAuth";
 
 import SongList from "./components/SongList";
-import NewSongForm from "./components/NewSongForm";
 import NewsSection from "./components/NewsSection";
 
 interface NewsItem {
@@ -22,7 +21,6 @@ async function fetchNews(): Promise<NewsItem[]> {
 export default function Dashboard() {
   const { isAuthenticated } = useAuth();
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [view, setView] = useState<"full" | "libraryOnly">("full");
 
   useEffect(() => {
@@ -45,10 +43,8 @@ export default function Dashboard() {
         </button>
       </header>
 
-      <NewSongForm onCreated={() => setRefreshKey((k) => k + 1)} />
-
-      <SongList key={refreshKey} />
-
+      <SongList />
+      <SongList />
       {view === "full" && <NewsSection items={news} />}
     </div>
   );
