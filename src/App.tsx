@@ -1,11 +1,28 @@
-import "./App.css";
+// example usage in App.tsx
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Splash from "./pages/Splash/Splash";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import { AuthProvider, PrivateRoute } from "./context/AuthContext";
 
-function App() {
+export default function App() {
   return (
-    <>
-      <h1>Test</h1>
-    </>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/"
+            element={<Splash />}
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
-
-export default App;
