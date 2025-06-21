@@ -21,10 +21,10 @@ export default function NewSongForm({ onCreated }: Props) {
       await createSong({
         title,
         isPublic,
-        payload: { lyrics }, // ← payload now matches schema exactly
+        payload: { lyrics }, 
       });
 
-      /* reset form */
+
       setTitle("");
       setLyrics("");
       setIsPublic(false);

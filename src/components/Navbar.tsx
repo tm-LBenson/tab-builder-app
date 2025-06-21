@@ -8,12 +8,12 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="w-full px-6 py-4 flex items-center justify-between">
+      <nav className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-b from-gray-900 to-black text-gray-100">
         <Link
           to="/"
           className="text-2xl font-extrabold text-red-500"
         >
-           TabVault
+          TabVault
         </Link>
 
         <div className="hidden md:flex items-center space-x-6">
