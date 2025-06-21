@@ -8,7 +8,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-b from-gray-900 to-black text-gray-100">
+      <nav className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-b from-black to-gray-900 text-gray-100">
         <Link
           to="/"
           className="text-2xl font-extrabold text-red-500"
