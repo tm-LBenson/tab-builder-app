@@ -56,7 +56,6 @@ export default function SectionList({
   }
 
   const dup: DuplicateSection = (idx: number): void => {
-    console.log("dup");
     const copy: Section[] = structuredClone(sections);
     const clone: Section = { ...copy[idx], id: crypto.randomUUID() };
     copy.splice(idx + 1, 0, clone);

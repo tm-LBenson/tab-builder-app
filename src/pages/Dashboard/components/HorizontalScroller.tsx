@@ -1,6 +1,5 @@
-import { useState } from "react";
-import type { Song } from "./Songcard";
-import SongCard from "./Songcard";
+import { useEffect, useState } from "react";
+import SongCard, { type Song } from "./Songcard";
 
 interface Props {
   title: string;
@@ -9,6 +8,8 @@ interface Props {
 
 export default function HorizontalScroller({ title, songs }: Props) {
   const [list, setList] = useState<Song[]>(songs);
+
+  useEffect(() => setList(songs), [songs]); 
 
   if (!list.length) return null;
 

@@ -12,8 +12,9 @@ async function jsonHeaders(): Promise<HeadersInit> {
   return { ...(await authHeaders()), "Content-Type": "application/json" };
 }
 
-export async function getSongs() {
+export async function getMySongs() {
   const res = await fetch(`${base}/songs`, { headers: await authHeaders() });
+
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -59,7 +60,7 @@ export async function deleteSong(id: string) {
 }
 
 export async function fetchPublicSongs(limit = 10) {
-  const res = await fetch(`${base}/songs?public=true&limit=${limit}`);
+  const res = await fetch(`${base}/songs/public?limit=${limit}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }

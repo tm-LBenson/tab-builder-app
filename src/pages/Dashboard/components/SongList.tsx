@@ -1,13 +1,13 @@
-/* components/SongList.tsx -------------------------------------------------- */
 import { useEffect, useState } from "react";
 
 import HorizontalScroller from "./HorizontalScroller";
-import { getSongs } from "../../../lib/api";
+import { getMySongs } from '../../../lib/api';
 
 interface Song {
   id: string;
   title: string;
   public: boolean;
+  ownerUid?: string;
   updated: string;
   payload: Record<string, unknown>;
 }
@@ -17,7 +17,7 @@ export default function SongList() {
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    getSongs()
+    getMySongs()
       .then((s) => setSongs(s || []))
       .catch((e) => setErr(e.message));
   }, []);

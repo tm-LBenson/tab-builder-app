@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getSongs } from "../../lib/api";
+import { getMySongs } from '../../lib/api';
 
 type SectionType = "Verse" | "Chorus" | "Bridge" | "Intro" | "Outro";
 interface Word {
@@ -32,7 +32,7 @@ export default function SongView() {
 
   useEffect(() => {
     if (!id) return;
-    getSongs()
+    getMySongs()
       .then((songs: SongRes[]) => {
         const found = songs.find((s) => s.id === id);
         if (!found) throw new Error("Song not found");
