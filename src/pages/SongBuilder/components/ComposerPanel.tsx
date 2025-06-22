@@ -1,6 +1,19 @@
-import { useState } from "react";
-import type { Section, SectionType } from './SectionList';
+/* src/pages/Builder/components/ComposerPanel.tsx */
+import { useState, useEffect } from "react";
+import type { Section, SectionType } from "./SectionList";
 
+interface Props {
+  title: string;
+  onTitle: (t: string) => void;
+  notes: string;
+  onNotes: (n: string) => void;
+  isPublic: boolean;
+  onPublic: (v: boolean) => void;
+  addSection: (s: Section) => void;
+
+  draftSection: Section | null;
+  clearDraft: () => void;
+}
 
 export default function ComposerPanel({
   title,
@@ -10,17 +23,28 @@ export default function ComposerPanel({
   isPublic,
   onPublic,
   addSection,
-}: {
-  title: string;
-  onTitle: (t: string) => void;
-  notes: string;
-  onNotes: (n: string) => void;
-  isPublic: boolean;
-  onPublic: (v: boolean) => void;
-  addSection: (s: Section) => void;
-}) {
+  draftSection,
+  clearDraft,
+}: Props) {
   const [draftType, setDraftType] = useState<SectionType>("Verse");
   const [draftText, setDraftText] = useState("");
+
+  useEffect(() => {
+    if (!draftSection) return;
+    setDraftType(draftSection.type);
+    interface Word {
+      text: string;
+    }
+
+    interface Line {
+      words: Word[];
+    }
+
+    const text: string = draftSection.lines
+      .map((l: Line) => l.words.map((w: Word) => w.text).join(" "))
+      .join("\n");
+    setDraftText(text);
+  }, [draftSection]);
 
   const textToLines = (txt: string) =>
     txt
@@ -33,15 +57,26 @@ export default function ComposerPanel({
           .map((text) => ({ text })),
       }));
 
-  function add() {
+  function handleSave() {
     if (!draftText.trim()) return;
-    addSection({
-      id: crypto.randomUUID(),
+
+    const newSection: Section = {
+      id: draftSection ? draftSection.id : crypto.randomUUID(),
       type: draftType,
       lines: textToLines(draftText),
-    });
-    setDraftText("");
+    };
+
+    addSection(newSection);
+    resetForm();
   }
+
+  function resetForm() {
+    setDraftText("");
+    setDraftType("Verse");
+    clearDraft();
+  }
+
+  const buttonLabel = draftSection ? "Save" : "+ Add";
 
   return (
     <>
@@ -86,10 +121,10 @@ export default function ComposerPanel({
         />
 
         <button
-          onClick={add}
+          onClick={handleSave}
           className="h-12 px-4 bg-blue-600 rounded hover:bg-blue-500 shrink-0"
         >
-          + Add
+          {buttonLabel}
         </button>
       </div>
     </>

@@ -24,9 +24,11 @@ export interface Section {
 export default function SectionList({
   sections,
   setSections,
+  onEdit,
   picker,
 }: {
   sections: Section[];
+  onEdit: (idx: number) => void;
   setSections: (s: Section[]) => void;
   picker: PickerHook;
 }) {
@@ -47,7 +49,19 @@ export default function SectionList({
   }
 
   const del: DeleteSection = (idx: number): void =>
-      setSections(sections.filter((_, i: number) => i !== idx));
+    setSections(sections.filter((_, i: number) => i !== idx));
+
+  interface DuplicateSection {
+    (idx: number): void;
+  }
+
+  const dup: DuplicateSection = (idx: number): void => {
+    console.log("dup");
+    const copy: Section[] = structuredClone(sections);
+    const clone: Section = { ...copy[idx], id: crypto.randomUUID() };
+    copy.splice(idx + 1, 0, clone);
+    setSections(copy);
+  };
 
   return (
     <DndContext
@@ -61,9 +75,10 @@ export default function SectionList({
         {sections.map((s, idx) => (
           <SectionCard
             key={s.id}
+            onDuplicate={dup}
             section={s}
             index={idx}
-            onEdit={() => {}}
+            onEdit={onEdit}
             onDelete={del}
             picker={picker}
           />

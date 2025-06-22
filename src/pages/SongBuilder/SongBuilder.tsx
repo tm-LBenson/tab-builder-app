@@ -24,6 +24,7 @@ export default function SongBuilder() {
   const [sections, setSections] = useState<Section[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [draftSection, setDraftSection] = useState<Section | null>(null);
 
   const picker = useChordPicker(sections, setSections);
 
@@ -40,6 +41,17 @@ export default function SongBuilder() {
       })
       .catch((e) => setError(e.message));
   }, [id]);
+
+  function upsertSection(sec: Section) {
+    // NEW helper
+    setSections((arr) => {
+      const idx = arr.findIndex((s) => s.id === sec.id);
+      if (idx === -1) return [...arr, sec];
+      const copy = [...arr];
+      copy[idx] = sec;
+      return copy;
+    });
+  }
 
   async function saveSong() {
     setSaving(true);
@@ -66,7 +78,10 @@ export default function SongBuilder() {
       setSaving(false);
     }
   }
-
+  function handleEdit(idx: number) {
+    setDraftSection(sections[idx]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6 space-y-8">
       <div className="max-w-[900px] mx-auto space-y-6">
@@ -79,13 +94,16 @@ export default function SongBuilder() {
           onNotes={setNotes}
           isPublic={isPublic}
           onPublic={setIsPublic}
-          addSection={(s) => setSections((arr) => [...arr, s])}
+          draftSection={draftSection}
+          clearDraft={() => setDraftSection(null)}
+          addSection={upsertSection}
         />
 
         <SectionList
           sections={sections}
           setSections={setSections}
           picker={picker}
+          onEdit={handleEdit}
         />
 
         {error && <p className="text-red-500">{error}</p>}

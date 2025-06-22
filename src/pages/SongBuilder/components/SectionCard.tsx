@@ -11,7 +11,8 @@ interface Props {
   section: Section;
   index: number;
   picker: PickerHook;
-  onEdit: (idx: number) => void;
+  onEdit?: (idx: number) => void;
+  onDuplicate: (idx: number) => void;
   onDelete: (idx: number) => void;
 }
 
@@ -20,6 +21,7 @@ export default function SectionCard({
   index,
   picker,
   onEdit,
+  onDuplicate,
   onDelete,
 }: Props) {
   const {
@@ -40,14 +42,14 @@ export default function SectionCard({
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  /* click-outside to close menu */
   useEffect(() => {
-    function close(e: MouseEvent) {
-      if (!open) return;
-      if (!menuRef.current?.contains(e.target as Node)) setOpen(false);
+    function outside(e: MouseEvent) {
+      if (open && !menuRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
-    window.addEventListener("mousedown", close);
-    return () => window.removeEventListener("mousedown", close);
+    window.addEventListener("mousedown", outside);
+    return () => window.removeEventListener("mousedown", outside);
   }, [open]);
 
   return (
@@ -57,7 +59,6 @@ export default function SectionCard({
       {...attributes}
     >
       <div className="space-y-1 border-t border-gray-700 pt-4 relative">
-        {/* header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <button
@@ -72,26 +73,33 @@ export default function SectionCard({
             </h2>
           </div>
 
-          {/* kebab menu */}
           <div className="relative">
             <button
               onClick={() => setOpen((o) => !o)}
-              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-800"
+              className="w-8 h-8 flex items-center justify-center rounded
+                         hover:bg-gray-800"
             >
               ⋯
             </button>
 
             {open && (
               <SectionMenu
-                open={open}
-                setOpen={setOpen}
-                onEdit={() => {
+                ref={menuRef}
+                onEdit={
+                  onEdit
+                    ? () => {
+                        onEdit(index);
+                        setOpen(false);
+                      }
+                    : undefined
+                }
+                onDuplicate={() => {
+                  onDuplicate(index);
                   setOpen(false);
-                  onEdit(index);
                 }}
                 onDelete={() => {
-                  setOpen(false);
                   onDelete(index);
+                  setOpen(false);
                 }}
               />
             )}
@@ -109,7 +117,10 @@ export default function SectionCard({
                 className="relative select-none"
               >
                 {w.chord && (
-                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm text-blue-400">
+                  <span
+                    className="absolute -top-6 left-1/2
+                                   -translate-x-1/2 text-sm text-blue-400"
+                  >
                     {w.chord}
                   </span>
                 )}
