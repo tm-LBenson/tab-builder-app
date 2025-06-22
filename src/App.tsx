@@ -35,6 +35,14 @@ export default function App() {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/songs/:id/edit"
+              element={
+                <PrivateRoute>
+                  <SongBuilder />
+                </PrivateRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

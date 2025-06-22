@@ -31,3 +31,25 @@ export async function createSong(payload: {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+async function authHeaders(): Promise<HeadersInit> {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("not authenticated");
+  return { Authorization: `Bearer ${token}` };
+}
+
+export async function deleteSong(id: string) {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/songs/${id}`, {
+    method: "DELETE",
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function updateSong(id: string, body: Record<string, unknown>) {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/songs/${id}`, {
+    method: "PUT",
+    headers: { ...(await authHeaders()), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}

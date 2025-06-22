@@ -44,7 +44,6 @@ export default function Dashboard() {
       </header>
 
       <SongList />
-      <SongList />
       {view === "full" && <NewsSection items={news} />}
     </div>
   );
