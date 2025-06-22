@@ -1,8 +1,24 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createSong, getSongs, updateSong } from "../../lib/api";
-import ChordPicker from "./ChordPicker";
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
+import { createSong, getSong, updateSong } from "../../lib/api";
+import ChordPicker from "./ChordPicker";
+import type { Song as BaseSong } from "../Dashboard/components/Songcard";
+import DragHandle from "../Dashboard/components/DragHandle";
+
+interface Song extends BaseSong {
+  isPublic?: boolean;
+  payload?: { notes?: string; sections?: Section[] };
+}
 type SectionType = "Verse" | "Chorus" | "Bridge" | "Intro" | "Outro";
 interface Word {
   text: string;
@@ -11,10 +27,50 @@ interface Word {
 interface Line {
   words: Word[];
 }
-interface Section {
+export interface Section {
   id: string;
   type: SectionType;
   lines: Line[];
+}
+
+function SectionRow({
+  section,
+  children,
+}: {
+  section: Section;
+  children: React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+    >
+      <button
+        {...listeners}
+        className="mr-2 cursor-grab hover:text-blue-400 select-none"
+        title="Drag section"
+      >
+        <DragHandle />
+      </button>
+      {children}
+    </div>
+  );
 }
 
 export default function SongBuilder() {
@@ -23,6 +79,7 @@ export default function SongBuilder() {
 
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
 
   const [sections, setSections] = useState<Section[]>([]);
 
@@ -44,16 +101,19 @@ export default function SongBuilder() {
 
   useEffect(() => {
     if (!id) return;
-    getSongs()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((songs: any[]) => {
-        const data = songs.find((song) => song.id === id);
-        if (!data) throw new Error("Song not found");
+    getSong(id)
+      .then((data: Song) => {
         setTitle(data.title);
         setNotes(data.payload?.notes ?? "");
+        setIsPublic(
+          Boolean(
+            (data as Song).isPublic ??
+              (data as Song & { IsPublic?: boolean }).IsPublic,
+          ),
+        );
         setSections(data.payload?.sections ?? []);
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e) => setError(e.message));
   }, [id]);
 
   useEffect(() => {
@@ -79,37 +139,34 @@ export default function SongBuilder() {
   const linesToText = (ls: Line[]): string =>
     ls.map((l) => l.words.map((w) => w.text).join(" ")).join("\n");
 
-  function mergeChords(oldS: Section, newS: Section): Section {
-    const merged = structuredClone(newS);
-    oldS.lines.forEach((oldLine, li) => {
-      if (li >= merged.lines.length) return;
-      oldLine.words.forEach((oldWord, wi) => {
-        if (wi >= merged.lines[li].words.length) return;
-        const newWord = merged.lines[li].words[wi];
-        if (oldWord.text === newWord.text) newWord.chord = oldWord.chord;
+  const mergeChords = (oldS: Section, newS: Section): Section => {
+    const m = structuredClone(newS);
+    oldS.lines.forEach((ol, li) => {
+      if (li >= m.lines.length) return;
+      ol.words.forEach((ow, wi) => {
+        if (wi >= m.lines[li].words.length) return;
+        if (ow.text === m.lines[li].words[wi].text)
+          m.lines[li].words[wi].chord = ow.chord;
       });
     });
-    return merged;
-  }
+    return m;
+  };
 
   function saveSection() {
     if (!draftText.trim()) return;
-
     const sec: Section = {
       id: editIdx === null ? crypto.randomUUID() : sections[editIdx].id,
       type: draftType,
       lines: textToLines(draftText),
     };
-
     setSections((prev) => {
-      const clone = [...prev];
-      if (editIdx === null) clone.push(sec);
-      else clone[editIdx] = mergeChords(clone[editIdx], sec);
-      return clone;
+      const c = [...prev];
+      if (editIdx === null) c.push(sec);
+      else c[editIdx] = mergeChords(c[editIdx], sec);
+      return c;
     });
     clearDraft();
   }
-
   function clearDraft() {
     setDraftText("");
     setDraftType("Verse");
@@ -124,7 +181,6 @@ export default function SongBuilder() {
     setMenuIdx(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-
   function handleDelete(idx: number) {
     setSections((sec) => sec.filter((_, i) => i !== idx));
     if (editIdx !== null && idx === editIdx) clearDraft();
@@ -134,21 +190,28 @@ export default function SongBuilder() {
   function handleWordClick(s: number, l: number, w: number) {
     setPicker({ s, l, w });
   }
-  function setChord(chord: string | null) {
+  function setChord(ch: string | null) {
     if (!picker) return;
     setSections((prev) => {
-      const clone = structuredClone(prev);
-      clone[picker.s].lines[picker.l].words[picker.w].chord =
-        chord || undefined;
-      return clone;
+      const c = structuredClone(prev);
+      c[picker.s].lines[picker.l].words[picker.w].chord = ch || undefined;
+      return c;
     });
+  }
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = sections.findIndex((s) => s.id === active.id);
+    const newIdx = sections.findIndex((s) => s.id === over.id);
+    setSections((arr) => arrayMove(arr, oldIdx, newIdx));
   }
 
   async function saveSong() {
     setSaving(true);
     setError("");
     try {
-      const body = { title, isPublic: false, payload: { notes, sections } };
+      const body = { title, isPublic, payload: { notes, sections } };
       if (id) {
         await updateSong(id, body);
       } else {
@@ -156,8 +219,13 @@ export default function SongBuilder() {
       }
       nav("/dashboard");
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        setError(e.message);
+      if (
+        e &&
+        typeof e === "object" &&
+        "message" in e &&
+        typeof (e as { message?: unknown }).message === "string"
+      ) {
+        setError((e as { message: string }).message);
       } else {
         setError("Unexpected error");
       }
@@ -184,6 +252,14 @@ export default function SongBuilder() {
           placeholder="Song notes"
           className="w-full bg-gray-800 h-24 px-3 py-2 rounded resize-y"
         />
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+          />
+          <span className="text-sm">Public</span>
+        </label>
 
         <div className="flex flex-col md:flex-row gap-4">
           <select
@@ -211,71 +287,87 @@ export default function SongBuilder() {
           </button>
         </div>
 
-        {sections.map((sec, sidx) => (
-          <div
-            key={sec.id}
-            className="space-y-1 border-t border-gray-700 pt-4 relative"
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={sections.map((s) => s.id)}
+            strategy={verticalListSortingStrategy}
           >
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-red-400">{sec.type}</h2>
-
-              <div className="relative">
-                <button
-                  onClick={() => setMenuIdx(menuIdx === sidx ? null : sidx)}
-                  className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-800"
-                >
-                  ⋯
-                </button>
-
-                {menuIdx === sidx && (
-                  <div
-                    ref={menuRef}
-                    className="absolute right-0 mt-1 bg-gray-800 rounded shadow-lg z-10 min-w-[120px] py-1"
-                  >
-                    <button
-                      onClick={() => handleEdit(sidx)}
-                      className="flex items-center gap-2 px-4 py-2 hover:bg-gray-700 w-full text-left"
-                    >
-                      ✎ <span>Edit</span>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(sidx)}
-                      className="flex items-center gap-2 px-4 py-2 hover:bg-gray-700 w-full text-left text-red-400"
-                    >
-                      🗑 <span>Delete</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {sec.lines.map((line, lidx) => (
-              <div
-                key={lidx}
-                className="flex gap-1 flex-wrap mt-6"
+            {sections.map((sec, sidx) => (
+              <SectionRow
+                key={sec.id}
+                section={sec}
               >
-                {line.words.map((w, widx) => (
-                  <span
-                    key={widx}
-                    className="relative select-none"
-                  >
-                    {w.chord && (
-                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm text-blue-400">
-                        {w.chord}
-                      </span>
-                    )}
-                    <span
-                      onClick={() => handleWordClick(sidx, lidx, widx)}
-                      className="px-1 cursor-pointer hover:bg-gray-700 rounded"
+                <div className="space-y-1 border-t border-gray-700 pt-4 relative">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-red-400">
+                      {sec.type}
+                    </h2>
+
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setMenuIdx(menuIdx === sidx ? null : sidx)
+                        }
+                        className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-800"
+                      >
+                        ⋯
+                      </button>
+
+                      {menuIdx === sidx && (
+                        <div
+                          ref={menuRef}
+                          className="absolute right-0 mt-1 bg-gray-800 rounded shadow-lg z-10 min-w-[120px] py-1"
+                        >
+                          <button
+                            onClick={() => handleEdit(sidx)}
+                            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-700 w-full text-left"
+                          >
+                            ✎ <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(sidx)}
+                            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-700 w-full text-left text-red-400"
+                          >
+                            🗑 <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {sec.lines.map((line, lidx) => (
+                    <div
+                      key={lidx}
+                      className="flex gap-1 flex-wrap mt-6"
                     >
-                      {w.text}
-                    </span>
-                  </span>
-                ))}
-              </div>
+                      {line.words.map((w, widx) => (
+                        <span
+                          key={widx}
+                          className="relative select-none"
+                        >
+                          {w.chord && (
+                            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm text-blue-400">
+                              {w.chord}
+                            </span>
+                          )}
+                          <span
+                            onClick={() => handleWordClick(sidx, lidx, widx)}
+                            className="px-1 cursor-pointer hover:bg-gray-700 rounded"
+                          >
+                            {w.text}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </SectionRow>
             ))}
-          </div>
-        ))}
+          </SortableContext>
+        </DndContext>
 
         {error && <p className="text-red-500">{error}</p>}
         <button

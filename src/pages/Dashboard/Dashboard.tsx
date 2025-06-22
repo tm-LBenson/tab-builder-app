@@ -13,7 +13,7 @@ interface NewsItem {
 async function fetchNews(): Promise<NewsItem[]> {
   // TODO: swap this for a real endpoint / RSS feed
   return [
-    { id: "1", title: "Welcome to TabVault!", url: "#" },
+    { id: "1", title: "Welcome to Song Vault!", url: "#" },
     { id: "2", title: "New sharing features released", url: "#" },
   ];
 }

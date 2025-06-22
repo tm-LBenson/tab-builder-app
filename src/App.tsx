@@ -4,7 +4,8 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import { AuthProvider, PrivateRoute } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import SongBuilder from './pages/SongBuilder/SongBuilder';
+import SongBuilder from "./pages/SongBuilder/SongBuilder";
+import SongView from "./pages/View/SongView";
 
 export default function App() {
   return (
@@ -40,6 +41,14 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <SongBuilder />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/songs/:id"
+              element={
+                <PrivateRoute>
+                  <SongView />
                 </PrivateRoute>
               }
             />

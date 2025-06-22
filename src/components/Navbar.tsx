@@ -13,7 +13,7 @@ export default function Navbar() {
           to="/"
           className="text-2xl font-extrabold text-red-500"
         >
-          TabVault
+          Song Vault
         </Link>
 
         <div className="hidden md:flex items-center space-x-6">
